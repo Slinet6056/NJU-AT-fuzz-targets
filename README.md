@@ -11,9 +11,32 @@
 - `sh/`: 一些比较Tricky的构建脚本，供参考。
 - `*.tar.gz`: 项目压缩包。
 
-### 2 模糊目标详细信息
+### 2 常见指令
+
+这里列举一些使用afl-cc插装C/C++项目时的常见指令。
+
+```shell
+# 指定C/C++编译器。
+export CC=<path-to-aflpp>/afl-cc
+export CXX=<path-to-aflpp>/afl-cc
+
+# 使用Autotools构建系统编译项目的典型流程。
+./autogen.sh
+./configure --disable-shared
+make
+
+# 使用cmake生成Makefile，之后编译项目。
+cmake -S <path-to-src> -B <path-to-build> -G "Unix Makefiles"
+cd <path-to-build>
+make
+```
+
+
+### 3 模糊目标详细信息
 
 下表为模糊目标/被测程序信息，从左到右每一列分别为目标ID、目标名称、目标所在项目压缩包、使用afl/afl++运行该目标时`--`部分后面的命令行内容，以及供参考的初始种子来源。
+
+**注**：构建`lua`时注意阅读`src/Makefile`。
 
 | TID  | Target  | Project  | AFL-CMD  |  Initial Seeds  |
 |--------|--------|--------|--------| --------|
