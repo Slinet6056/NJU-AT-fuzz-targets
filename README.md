@@ -16,7 +16,7 @@
 这里列举一些使用afl-cc插装C/C++项目时的常见指令。
 
 ```shell
-# 安装构建工具
+# 安装常见依赖
 apt-get install -y libtool build-essential cmake python3 gcc clang llvm file binutils
 
 # 指定C/C++编译器。
