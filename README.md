@@ -16,6 +16,9 @@
 这里列举一些使用afl-cc插装C/C++项目时的常见指令。
 
 ```shell
+# 安装构建工具
+apt-get install -y libtool build-essential cmake python3 gcc clang llvm file binutils
+
 # 指定C/C++编译器。
 export CC=<path-to-aflpp>/afl-cc
 export CXX=<path-to-aflpp>/afl-cc
