@@ -33,17 +33,20 @@ sleep 3
 
 # Instrument SUBJECT programs
 pushd "$SUBJECT_DIR" || exit 1
-  rm mjs
-  $CC -DMJS_MAIN mjs.c -ldl -g -o mjs
+  # Build libjpeg-turbo with cmake
+  mkdir -p build
+  cd build
+  cmake -G"Unix Makefiles" ..
+  make clean
+  make
 popd || exit 1
 
 # Move to target directory
-
-TARGET="mjs"
+TARGET="djpeg"
 TARGET_DIR="$BENCH_DIR/$TARGET"
 # Refresh
 if [ -d "$TARGET_DIR" ]; then
   rm -rf "$TARGET_DIR"
 fi
 mkdir -p "$TARGET_DIR"
-mv "$SUBJECT_DIR/$TARGET" "$TARGET_DIR"
+mv "$SUBJECT_DIR/build/djpeg" "$TARGET_DIR"

@@ -33,17 +33,19 @@ sleep 3
 
 # Instrument SUBJECT programs
 pushd "$SUBJECT_DIR" || exit 1
-  rm mjs
-  $CC -DMJS_MAIN mjs.c -ldl -g -o mjs
+  # Build lua
+  cd src
+  make clean
+  make all MYCFLAGS="-O2 -fPIC -g" MYLIBS="-ldl"
+  cd ..
 popd || exit 1
 
 # Move to target directory
-
-TARGET="mjs"
+TARGET="lua"
 TARGET_DIR="$BENCH_DIR/$TARGET"
 # Refresh
 if [ -d "$TARGET_DIR" ]; then
   rm -rf "$TARGET_DIR"
 fi
 mkdir -p "$TARGET_DIR"
-mv "$SUBJECT_DIR/$TARGET" "$TARGET_DIR"
+mv "$SUBJECT_DIR/src/lua" "$TARGET_DIR"

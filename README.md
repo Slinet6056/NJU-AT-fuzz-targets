@@ -1,5 +1,7 @@
 ## NJUse软件测试课程作业（模糊测试方向）
 
+> 在原项目基础上添加了更多比较Tricky的构建脚本，现在可以一键构建所有目标程序😋。使用方法：进入`sh`目录，运行`chmod +x build_all.sh && ./build_all.sh`即可。
+
 南京大学软件学院，2024秋季软件测试课程，模糊测试方向代码大作业选题指定的模糊目标程序。
 选择该课题的小组应当在了解[AFL++](https://github.com/AFLplusplus/AFLplusplus)运行原理的基础上，参考AFL++的实现，使用Java或者Python语言自行实现模糊器。
 
