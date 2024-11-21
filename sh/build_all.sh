@@ -3,6 +3,12 @@
 # Exit on any error
 set -e
 
+# Check if running on Ubuntu 22.04
+if ! grep -q "Ubuntu 22.04" /etc/os-release; then
+    echo "This script requires Ubuntu 22.04. Current OS is not compatible."
+    exit 1
+fi
+
 # Directory Setup
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(dirname "$SCRIPT_DIR")"
@@ -198,12 +204,6 @@ check_builds() {
 
 # Main execution
 echo "Starting build process..."
-
-# Check if running on Ubuntu
-if ! grep -q "Ubuntu" /etc/os-release; then
-    echo "This script is designed for Ubuntu. Current OS may not be compatible."
-    exit 1
-fi
 
 # Make scripts executable
 make_scripts_executable
