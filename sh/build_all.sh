@@ -192,13 +192,21 @@ check_builds() {
             FAILED=1
         else
             echo "Success: Found $binary in $OUTPUT_DIR/$dir"
+            # Check AFL instrumentation
+            echo "Checking AFL instrumentation for $binary..."
+            if ! nm -C "$OUTPUT_DIR/$dir/$binary" | grep -q "afl"; then
+                echo "Warning: No AFL instrumentation found in $binary"
+                FAILED=1
+            else
+                echo "Success: AFL instrumentation found in $binary"
+            fi
         fi
     done
 
     if [ $FAILED -eq 1 ]; then
-        echo "Some builds failed. Please check the error messages above."
+        echo "Some builds failed or missing AFL instrumentation. Please check the error messages above."
     else
-        echo "All builds completed successfully!"
+        echo "All builds completed successfully with AFL instrumentation!"
     fi
 }
 
