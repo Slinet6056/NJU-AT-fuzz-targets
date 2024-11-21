@@ -36,7 +36,7 @@ pushd "$SUBJECT_DIR" || exit 1
   # Build lua
   cd src
   make clean
-  make all MYCFLAGS="-O2 -fPIC -g" MYLIBS="-ldl"
+  make all MYCFLAGS="-O2 -fPIC -g" MYLIBS="-ldl" CC="$AFLPP/afl-cc"
   cd ..
 popd || exit 1
 
