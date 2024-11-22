@@ -176,6 +176,12 @@ build_targets() {
     done
 }
 
+# Function to ensure all executables are executable
+ensure_executables_permissions() {
+    echo "Ensuring all executables have proper permissions..."
+    find "$OUTPUT_DIR" -type f -exec chmod +x {} \;
+}
+
 # Function to check build success
 check_builds() {
     echo "Checking build results..."
@@ -244,6 +250,9 @@ extract_projects
 
 # Build all targets
 build_targets
+
+# Ensure all executables are executable
+ensure_executables_permissions
 
 # Check build results
 check_builds
