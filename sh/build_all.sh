@@ -67,15 +67,21 @@ install_project_deps() {
     fi
 }
 
+# Clone AFL++ source code
+clone_aflpp() {
+    echo "Cloning AFL++..."
+    cd "$BUILD_DIR"
+    if [ ! -d "AFLplusplus" ]; then
+        git clone https://github.com/AFLplusplus/AFLplusplus
+    fi
+    cd "$SCRIPT_DIR"
+}
+
 # Install AFL++ if not already installed
 install_aflpp() {
     if ! command_exists afl-fuzz; then
         echo "Installing AFL++..."
-        cd "$BUILD_DIR"
-        if [ ! -d "AFLplusplus" ]; then
-            git clone https://github.com/AFLplusplus/AFLplusplus
-        fi
-        cd AFLplusplus
+        cd "$BUILD_DIR/AFLplusplus"
         make distrib
         if [ "$EUID" -ne 0 ]; then
             sudo make install
@@ -142,6 +148,7 @@ make_scripts_executable() {
 build_targets() {
     echo "Building all targets..."
     export AFLPP="$(dirname $(which afl-fuzz))"
+    export AFLPP_DIR="$AFLPP_DIR"
 
     # Array of build scripts and their corresponding source directories
     declare -A BUILD_CONFIGS=(
@@ -157,13 +164,14 @@ build_targets() {
         ["build_tcpdump.sh"]="tcpdump-tcpdump-4.99.5"
     )
 
+    BUILD_FAILED=0
     # Execute each build script
     for script in "${!BUILD_CONFIGS[@]}"; do
         source_dir="$BUILD_DIR/${BUILD_CONFIGS[$script]}"
         echo "Running $script with source dir: $source_dir"
         if ! bash "$SCRIPT_DIR/$script" "$source_dir" "$OUTPUT_DIR"; then
-            echo "Warning: Build script $script failed!"
-            echo "Continuing with next target..."
+            echo "Error: Build script $script failed!"
+            BUILD_FAILED=1
         fi
     done
 }
@@ -203,8 +211,11 @@ check_builds() {
         fi
     done
 
-    if [ $FAILED -eq 1 ]; then
-        echo "Some builds failed or missing AFL instrumentation. Please check the error messages above."
+    if [ $BUILD_FAILED -eq 1 ] || [ $FAILED -eq 1 ]; then
+        echo "Build process failed:"
+        [ $BUILD_FAILED -eq 1 ] && echo "Some build scripts failed during execution"
+        [ $FAILED -eq 1 ] && echo "Some binaries are missing or lack AFL instrumentation"
+        exit 1
     else
         echo "All builds completed successfully with AFL instrumentation!"
     fi
@@ -221,6 +232,9 @@ install_dependencies
 
 # Install project-specific dependencies
 install_project_deps
+
+# Clone AFL++ source code
+clone_aflpp
 
 # Install AFL++
 install_aflpp

@@ -20,7 +20,7 @@ popd || exit 1
 
 # Choose compilers
 export CC="$AFLPP/afl-cc"
-export CXX="$AFLPP/afl-cc++"
+export CXX="$AFLPP/afl-c++"
 
 # Show configuration results
 echo "==================== CONF-LOG ===================="
