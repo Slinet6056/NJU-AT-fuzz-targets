@@ -32,13 +32,13 @@ install_dependencies() {
         sudo apt-get update
         sudo apt-get install -y build-essential python3-dev automake cmake git flex bison libglib2.0-dev libpixman-1-dev python3-setuptools cargo libgtk-3-dev
         sudo apt-get install -y lld-14 llvm-14 llvm-14-dev clang-14 || sudo apt-get install -y lld llvm llvm-dev clang
-        sudo apt-get install -y gcc-$(gcc --version|head -n1|sed 's/\..*//'|sed 's/.* //')-plugin-dev libstdc++-$(gcc --version|head -n1|sed 's/\..*//'|sed 's/.* //')-dev
+        sudo apt-get install -y gcc-$(gcc --version | head -n1 | sed 's/\..*//' | sed 's/.* //')-plugin-dev libstdc++-$(gcc --version | head -n1 | sed 's/\..*//' | sed 's/.* //')-dev
         sudo apt-get install -y ninja-build cpio libcapstone-dev wget curl python3-pip
     else
         apt-get update
         apt-get install -y build-essential python3-dev automake cmake git flex bison libglib2.0-dev libpixman-1-dev python3-setuptools cargo libgtk-3-dev
         apt-get install -y lld-14 llvm-14 llvm-14-dev clang-14 || apt-get install -y lld llvm llvm-dev clang
-        apt-get install -y gcc-$(gcc --version|head -n1|sed 's/\..*//'|sed 's/.* //')-plugin-dev libstdc++-$(gcc --version|head -n1|sed 's/\..*//'|sed 's/.* //')-dev
+        apt-get install -y gcc-$(gcc --version | head -n1 | sed 's/\..*//' | sed 's/.* //')-plugin-dev libstdc++-$(gcc --version | head -n1 | sed 's/\..*//' | sed 's/.* //')-dev
         apt-get install -y ninja-build cpio libcapstone-dev wget curl python3-pip
     fi
 }
@@ -92,7 +92,7 @@ install_aflpp() {
 extract_projects() {
     echo "Extracting projects..."
     cd "$ROOT_DIR"
-    
+
     # Array of project archives and their expected directory names
     declare -A PROJECT_DIRS=(
         ["binutils-2.28.tar.gz"]="binutils-2.28"
@@ -142,7 +142,7 @@ make_scripts_executable() {
 build_targets() {
     echo "Building all targets..."
     export AFLPP="$(dirname $(which afl-fuzz))"
-    
+
     # Array of build scripts and their corresponding source directories
     declare -A BUILD_CONFIGS=(
         ["build_cxxfilt.sh"]="binutils-2.28"
