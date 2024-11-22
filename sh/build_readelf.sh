@@ -67,13 +67,23 @@ else
   exit 1
 fi
 
+# Check if AFL_USE_TMIN is set and equals "1"
+AFL_USE_TMIN=${AFL_USE_TMIN:-0}
+
 # Run afl-cmin to minimize the test corpus
 "$AFLPP/afl-cmin" -i "$RAW_SEEDS_DIR" -o "$CMIN_SEEDS_DIR" -- "$TARGET_DIR/readelf" -a @@ @@
 
-# Further minimize each seed with afl-tmin
-for seed in "$CMIN_SEEDS_DIR"/*; do
-  if [ -f "$seed" ]; then
-    seed_name=$(basename "$seed")
-    "$AFLPP/afl-tmin" -i "$seed" -o "$TMIN_SEEDS_DIR/$seed_name" -- "$TARGET_DIR/readelf" -a @@ @@
-  fi
-done
+if [ "$AFL_USE_TMIN" = "1" ]; then
+  echo "Running afl-tmin for further minimization..."
+  # Further minimize each seed with afl-tmin
+  for seed in "$CMIN_SEEDS_DIR"/*; do
+    if [ -f "$seed" ]; then
+      seed_name=$(basename "$seed")
+      "$AFLPP/afl-tmin" -i "$seed" -o "$TMIN_SEEDS_DIR/$seed_name" -- "$TARGET_DIR/readelf" -a @@ @@
+    fi
+  done
+else
+  echo "Skipping afl-tmin minimization (set AFL_USE_TMIN=1 to enable)"
+  # Copy cmin results to tmin directory when not using afl-tmin
+  cp "$CMIN_SEEDS_DIR"/* "$TMIN_SEEDS_DIR/"
+fi
