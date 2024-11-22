@@ -1,49 +1,29 @@
-name: Cross Platform Build
+name: Build
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
   workflow_dispatch:
 
 jobs:
   build:
-    name: Build on ${{ matrix.arch }}
+    name: Build
     runs-on: ubuntu-22.04
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - arch: x86_64
-            platform: linux/amd64
-          - arch: aarch64
-            platform: linux/arm64
 
     steps:
-    - uses: actions/checkout@v4
-      with:
-        submodules: recursive
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
-    - name: Set up QEMU
-      if: matrix.arch == 'aarch64'
-      uses: docker/setup-qemu-action@v3
+      - name: Build targets
+        run: |
+          chmod +x sh/build_all.sh
+          sh/build_all.sh
 
-    - name: Build in Docker
-      uses: docker/build-push-action@v6
-      with:
-        context: .
-        platforms: ${{ matrix.platform }}
-        load: true
-        tags: fuzz-build:latest
-        file: .github/workflows/Dockerfile
-
-    - name: Run build in container
-      run: |
-        docker run --rm -v ${{ github.workspace }}/output:/output fuzz-build:latest
-
-    - name: Upload artifacts
-      uses: actions/upload-artifact@v3
-      with:
-        name: fuzz-targets-${{ matrix.arch }}
-        path: output/
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzz-targets
+          path: output/
