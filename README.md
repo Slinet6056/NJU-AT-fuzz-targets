@@ -54,5 +54,5 @@ make
 | T06 | `readpng` | `libpng-1.6.29.tar.gz`          | `readpng`          | `afl++/testcases/images/png/`, `<project>/tests/`      |
 | T07 | `xmllint` | `libxml2-2.13.4.tar.gz`         | `xmllint @@`       | `afl++/testcases/others/xml/`, `<project>/test/`       |
 | T08 | `lua`     | `lua-5.4.7.tar.gz`              | `lua @@`           | https://github.com/lua/lua/tree/master/testes          |
-| T09 | `mjs`     | `mjs-2.20.0.tar.gz`             | `mjs -f @@`        | `afl++/testcases/others/mjs/`, `<project>/tests/`      |
+| T09 | `mjs`     | `mjs-2.20.0.tar.gz`             | `mjs -f @@`        | `afl++/testcases/others/js/`, `<project>/tests/`       |
 | T10 | `tcpdump` | `tcpdump-tcpdump-4.99.5.tar.gz` | `tcpdump -nr @@`   | `afl++/testcases/others/pcap/`, `<project>/tests/`     |

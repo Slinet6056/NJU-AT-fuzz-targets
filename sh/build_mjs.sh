@@ -59,10 +59,10 @@ mkdir -p "$CMIN_SEEDS_DIR"
 mkdir -p "$TMIN_SEEDS_DIR"
 
 # Copy initial seeds from AFL++ testcases
-if [ -d "$AFLPP_DIR/testcases/others/mjs" ]; then
-  cp "$AFLPP_DIR/testcases/others/mjs"/* "$RAW_SEEDS_DIR/"
+if [ -d "$AFLPP_DIR/testcases/others/js" ]; then
+  cp "$AFLPP_DIR/testcases/others/js"/* "$RAW_SEEDS_DIR/"
 else
-  echo "Error: AFL++ testcases directory not found at $AFLPP_DIR/testcases/others/mjs"
+  echo "Error: AFL++ testcases directory not found at $AFLPP_DIR/testcases/others/js"
   exit 1
 fi
 
