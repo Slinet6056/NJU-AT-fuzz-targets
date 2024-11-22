@@ -21,6 +21,10 @@ popd || exit 1
 # Choose compilers
 export CC="$AFLPP/afl-cc"
 export CXX="$AFLPP/afl-c++"
+# Add static linking flags
+export CFLAGS="-static"
+export CXXFLAGS="-static"
+export LDFLAGS="-static"
 
 # Show configuration results
 echo "==================== CONF-LOG ===================="
@@ -36,7 +40,7 @@ pushd "$SUBJECT_DIR" || exit 1
 # Build libjpeg-turbo with cmake
 mkdir -p build
 cd build
-cmake -G"Unix Makefiles" ..
+cmake -G"Unix Makefiles" -DENABLE_SHARED=0 ..
 make clean
 make
 popd || exit 1
@@ -49,7 +53,7 @@ if [ -d "$TARGET_DIR" ]; then
   rm -rf "$TARGET_DIR"
 fi
 mkdir -p "$TARGET_DIR"
-mv "$SUBJECT_DIR/build/djpeg" "$TARGET_DIR"
+mv "$SUBJECT_DIR/build/djpeg-static" "$TARGET_DIR/djpeg"
 
 # Create and prepare seeds directories
 SEEDS_BASE_DIR="$TARGET_DIR/seeds"
