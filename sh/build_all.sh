@@ -127,7 +127,13 @@ install_aflpp() {
         log_info "Building AFL++ distribution..."
         make distrib >>"$MAIN_LOG" 2>&1
         log_info "Installing AFL++..."
-        make install >>"$MAIN_LOG" 2>&1
+        if [ "$EUID" -ne 0 ]; then
+            log_info "Running as non-root user, using sudo for installation..."
+            sudo make install >>"$MAIN_LOG" 2>&1
+        else
+            log_info "Running as root user..."
+            make install >>"$MAIN_LOG" 2>&1
+        fi
         cd "$SCRIPT_DIR"
         log_success "AFL++ installed successfully"
     else
