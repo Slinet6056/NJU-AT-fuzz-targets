@@ -251,7 +251,6 @@ build_targets() {
                         log_error "Build failed for $script_name (check $SESSION_LOG_DIR/builds/${script%.sh}.log for details)"
                         exit 1
                     fi
-                    log_success "Built $script_name successfully"
                 done
             ) &
             pid=$!
@@ -321,7 +320,7 @@ check_builds() {
             log_error "Binary not found: $binary"
             FAILED=1
         else
-            if ! readelf -s "$OUTPUT_DIR/$dir/$binary" | grep -q "__afl_"; then
+            if ! nm -C "$OUTPUT_DIR/$dir/$binary" | grep -q "__afl_"; then
                 log_error "No AFL instrumentation found in $binary"
                 FAILED=1
             else
