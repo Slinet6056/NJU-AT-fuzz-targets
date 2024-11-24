@@ -3,11 +3,34 @@
 # Exit on any error
 set -e
 
-# Check if running on Ubuntu 22.04
-if ! grep -q "Ubuntu 22.04" /etc/os-release; then
-    echo "This script requires Ubuntu 22.04. Current OS is not compatible."
-    exit 1
-fi
+# Colors and formatting
+GREEN='\033[0;32m'
+BLUE='\033[0;34m'
+RED='\033[0;31m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+BOLD='\033[1m'
+
+# Logging functions
+log_info() {
+    echo -e "${BLUE}[INFO]${NC} $1"
+}
+
+log_success() {
+    echo -e "${GREEN}[SUCCESS]${NC} $1"
+}
+
+log_error() {
+    echo -e "${RED}[ERROR]${NC} $1" >&2
+}
+
+log_warning() {
+    echo -e "${YELLOW}[WARNING]${NC} $1"
+}
+
+log_section() {
+    echo -e "\n${BOLD}${BLUE}=== $1 ===${NC}\n"
+}
 
 # Directory Setup
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -15,10 +38,18 @@ ROOT_DIR="$(dirname "$SCRIPT_DIR")"
 BUILD_DIR="$ROOT_DIR/build"
 OUTPUT_DIR="$ROOT_DIR/output"
 AFLPP_DIR="$BUILD_DIR/AFLplusplus"
+LOGS_DIR="$ROOT_DIR/logs"
 
-# Create necessary directories
-mkdir -p "$BUILD_DIR"
-mkdir -p "$OUTPUT_DIR"
+# Get timestamp for this build session
+TIMESTAMP=$(date "+%Y%m%d_%H%M%S")
+SESSION_LOG_DIR="$LOGS_DIR/$TIMESTAMP"
+MAIN_LOG="$SESSION_LOG_DIR/build_all.log"
+
+# Check if running on Ubuntu 22.04
+if ! grep -q "Ubuntu 22.04" /etc/os-release; then
+    log_error "This script requires Ubuntu 22.04. Current OS is not compatible."
+    exit 1
+fi
 
 # Function to check if a command exists
 command_exists() {
@@ -27,76 +58,79 @@ command_exists() {
 
 # Install dependencies if not root, use sudo
 install_dependencies() {
-    echo "Installing dependencies..."
-    if [ "$EUID" -ne 0 ]; then
-        sudo apt-get update
-        sudo apt-get install -y build-essential python3-dev automake cmake git flex bison libglib2.0-dev libpixman-1-dev python3-setuptools cargo libgtk-3-dev
-        sudo apt-get install -y lld-14 llvm-14 llvm-14-dev clang-14 || sudo apt-get install -y lld llvm llvm-dev clang
-        sudo apt-get install -y gcc-$(gcc --version | head -n1 | sed 's/\..*//' | sed 's/.* //')-plugin-dev libstdc++-$(gcc --version | head -n1 | sed 's/\..*//' | sed 's/.* //')-dev
-        sudo apt-get install -y ninja-build cpio libcapstone-dev wget curl python3-pip
-    else
-        apt-get update
-        apt-get install -y build-essential python3-dev automake cmake git flex bison libglib2.0-dev libpixman-1-dev python3-setuptools cargo libgtk-3-dev
-        apt-get install -y lld-14 llvm-14 llvm-14-dev clang-14 || apt-get install -y lld llvm llvm-dev clang
-        apt-get install -y gcc-$(gcc --version | head -n1 | sed 's/\..*//' | sed 's/.* //')-plugin-dev libstdc++-$(gcc --version | head -n1 | sed 's/\..*//' | sed 's/.* //')-dev
-        apt-get install -y ninja-build cpio libcapstone-dev wget curl python3-pip
-    fi
+    log_section "Installing Dependencies"
+    {
+        if [ "$EUID" -ne 0 ]; then
+            sudo apt-get update
+            sudo apt-get install -y build-essential python3-dev automake cmake git flex bison libglib2.0-dev libpixman-1-dev python3-setuptools cargo libgtk-3-dev
+            sudo apt-get install -y lld-14 llvm-14 llvm-14-dev clang-14 || sudo apt-get install -y lld llvm llvm-dev clang
+            sudo apt-get install -y gcc-$(gcc --version | head -n1 | sed 's/\..*//' | sed 's/.* //')-plugin-dev libstdc++-$(gcc --version | head -n1 | sed 's/\..*//' | sed 's/.* //')-dev
+            sudo apt-get install -y ninja-build cpio libcapstone-dev wget curl python3-pip
+        else
+            apt-get update
+            apt-get install -y build-essential python3-dev automake cmake git flex bison libglib2.0-dev libpixman-1-dev python3-setuptools cargo libgtk-3-dev
+            apt-get install -y lld-14 llvm-14 llvm-14-dev clang-14 || apt-get install -y lld llvm llvm-dev clang
+            apt-get install -y gcc-$(gcc --version | head -n1 | sed 's/\..*//' | sed 's/.* //')-plugin-dev libstdc++-$(gcc --version | head -n1 | sed 's/\..*//' | sed 's/.* //')-dev
+            apt-get install -y ninja-build cpio libcapstone-dev wget curl python3-pip
+        fi
+    } >>"$MAIN_LOG" 2>&1
+    log_success "Dependencies installed successfully"
 }
 
 # Additional dependencies for specific projects
 install_project_deps() {
-    echo "Installing project-specific dependencies..."
-    if [ "$EUID" -ne 0 ]; then
-        # For libxml2
-        sudo apt-get install -y libtool-bin
-        # For tcpdump
-        sudo apt-get install -y libpcap-dev
-        # For binutils
-        sudo apt-get install -y texinfo
-        # For general build
-        sudo apt-get install -y zlib1g-dev
-    else
-        # For libxml2
-        apt-get install -y libtool-bin
-        # For tcpdump
-        apt-get install -y libpcap-dev
-        # For binutils
-        apt-get install -y texinfo
-        # For general build
-        apt-get install -y zlib1g-dev
-    fi
+    log_section "Installing Project-Specific Dependencies"
+    {
+        if [ "$EUID" -ne 0 ]; then
+            sudo apt-get install -y libtool-bin libpcap-dev texinfo zlib1g-dev
+        else
+            apt-get install -y libtool-bin libpcap-dev texinfo zlib1g-dev
+        fi
+    } >>"$MAIN_LOG" 2>&1
+    log_success "Project dependencies installed successfully"
 }
 
 # Clone AFL++ source code
 clone_aflpp() {
-    echo "Cloning AFL++..."
+    log_section "Cloning AFL++"
     cd "$BUILD_DIR"
     if [ ! -d "AFLplusplus" ]; then
-        git clone https://github.com/AFLplusplus/AFLplusplus
+        log_info "Starting to clone AFL++ from GitHub..."
+        if git clone https://github.com/AFLplusplus/AFLplusplus >>"$MAIN_LOG" 2>&1; then
+            log_success "AFL++ cloned successfully"
+        else
+            log_error "Failed to clone AFL++. Check $MAIN_LOG for details"
+            return 1
+        fi
+    else
+        log_info "AFL++ directory already exists"
     fi
     cd "$SCRIPT_DIR"
 }
 
 # Install AFL++ if not already installed
 install_aflpp() {
+    log_section "Installing AFL++"
     if ! command_exists afl-fuzz; then
-        echo "Installing AFL++..."
         cd "$BUILD_DIR/AFLplusplus"
-        make distrib
-        if [ "$EUID" -ne 0 ]; then
-            sudo make install
-        else
-            make install
-        fi
+        {
+            make distrib
+            if [ "$EUID" -ne 0 ]; then
+                sudo make install
+            else
+                make install
+            fi
+        } >>"$MAIN_LOG" 2>&1
         cd "$SCRIPT_DIR"
+        log_success "AFL++ installed successfully"
     else
-        echo "AFL++ is already installed"
+        log_info "AFL++ is already installed"
     fi
 }
 
 # Extract projects
 extract_projects() {
-    echo "Extracting projects..."
+    log_section "Extracting Projects"
     cd "$ROOT_DIR"
 
     # Array of project archives and their expected directory names
@@ -113,26 +147,29 @@ extract_projects() {
     # Extract each project
     for project in "${!PROJECT_DIRS[@]}"; do
         if [ -f "$project" ]; then
-            echo "Extracting $project..."
-            tar xf "$project" -C "$BUILD_DIR"
-            # Ensure directory name matches expected
-            expected_dir="${PROJECT_DIRS[$project]}"
-            if [ -d "$BUILD_DIR/$expected_dir" ]; then
-                echo "Directory $expected_dir exists as expected"
-            else
-                echo "Warning: Directory $expected_dir not found after extraction!"
-                # Try to find the actual directory
-                actual_dir=$(find "$BUILD_DIR" -maxdepth 1 -type d -name "${expected_dir%%-*}*" | head -n1)
-                if [ -n "$actual_dir" ]; then
-                    echo "Found similar directory: $actual_dir"
-                    mv "$actual_dir" "$BUILD_DIR/$expected_dir"
+            log_info "Extracting $project..."
+            {
+                if tar xzf "$project" -C "$BUILD_DIR" >>"$MAIN_LOG" 2>&1; then
+                    expected_dir="${PROJECT_DIRS[$project]}"
+                    if [ -d "$BUILD_DIR/$expected_dir" ]; then
+                        log_success "Successfully extracted $project"
+                    else
+                        actual_dir=$(find "$BUILD_DIR" -maxdepth 1 -type d -name "${expected_dir%%-*}*" | head -n1)
+                        if [ -n "$actual_dir" ]; then
+                            mv "$actual_dir" "$BUILD_DIR/$expected_dir" >>"$MAIN_LOG" 2>&1
+                            log_success "Successfully extracted $project (fixed directory name)"
+                        else
+                            log_error "Failed to extract $project - directory not found"
+                            exit 1
+                        fi
+                    fi
                 else
-                    echo "Error: Could not find extracted directory for $project"
+                    log_error "Failed to extract $project"
                     exit 1
                 fi
-            fi
+            }
         else
-            echo "Warning: $project not found!"
+            log_error "$project not found!"
             exit 1
         fi
     done
@@ -140,13 +177,14 @@ extract_projects() {
 
 # Make all build scripts executable
 make_scripts_executable() {
-    echo "Making build scripts executable..."
+    log_section "Making Build Scripts Executable"
     chmod +x "$SCRIPT_DIR"/build_*.sh
+    log_success "Build scripts made executable"
 }
 
 # Build all targets
 build_targets() {
-    echo "Building all targets..."
+    log_section "Building Targets"
     export AFLPP="$(dirname $(which afl-fuzz))"
     export AFLPP_DIR="$AFLPP_DIR"
 
@@ -165,26 +203,74 @@ build_targets() {
     )
 
     BUILD_FAILED=0
-    # Execute each build script
+    # Array to store background process PIDs and script names
+    declare -a PIDS=()
+    declare -A PID_TO_SCRIPT=()
+
+    # Create logs directory
+    mkdir -p "$SESSION_LOG_DIR/builds"
+
+    # Group scripts by source directory
+    declare -A DIR_TO_SCRIPTS=()
     for script in "${!BUILD_CONFIGS[@]}"; do
-        source_dir="$BUILD_DIR/${BUILD_CONFIGS[$script]}"
-        echo "Running $script with source dir: $source_dir"
-        if ! bash "$SCRIPT_DIR/$script" "$source_dir" "$OUTPUT_DIR"; then
-            echo "Error: Build script $script failed!"
+        source_dir="${BUILD_CONFIGS[$script]}"
+        DIR_TO_SCRIPTS[$source_dir]+=" $script"
+    done
+
+    # Execute scripts, running those from the same source directory sequentially
+    for source_dir in "${!DIR_TO_SCRIPTS[@]}"; do
+        read -ra scripts <<<"${DIR_TO_SCRIPTS[$source_dir]}"
+        if [ ${#scripts[@]} -gt 1 ]; then
+            # Multiple scripts for same source - run sequentially in background
+            (
+                for script in "${scripts[@]}"; do
+                    script_name="${script%.sh}"
+                    log_info "Building $script_name..."
+                    if ! bash "$SCRIPT_DIR/$script" "$BUILD_DIR/$source_dir" "$OUTPUT_DIR" >"$SESSION_LOG_DIR/builds/${script%.sh}.log" 2>&1; then
+                        log_error "Build failed for $script_name (check $SESSION_LOG_DIR/builds/${script%.sh}.log for details)"
+                        exit 1
+                    fi
+                    log_success "Built $script_name"
+                done
+            ) &
+            pid=$!
+            PIDS+=($pid)
+            # Store each script name separately for better logging
+            for script in "${scripts[@]}"; do
+                PID_TO_SCRIPT[$pid]+="${script%.sh} "
+            done
+        else
+            # Single script for source - run in parallel
+            script="${scripts[0]}"
+            script_name="${script%.sh}"
+            log_info "Building $script_name..."
+            bash "$SCRIPT_DIR/$script" "$BUILD_DIR/$source_dir" "$OUTPUT_DIR" >"$SESSION_LOG_DIR/builds/${script%.sh}.log" 2>&1 &
+            pid=$!
+            PIDS+=($pid)
+            PID_TO_SCRIPT[$pid]=$script_name
+        fi
+    done
+
+    # Wait for all processes
+    for pid in "${PIDS[@]}"; do
+        if ! wait $pid; then
+            script_names=${PID_TO_SCRIPT[$pid]}
+            for script_name in $script_names; do
+                log_error "Build failed for $script_name (check $SESSION_LOG_DIR/builds/$script_name.log for details)"
+            done
             BUILD_FAILED=1
+        else
+            script_names=${PID_TO_SCRIPT[$pid]}
+            for script_name in $script_names; do
+                log_success "Built $script_name"
+            done
         fi
     done
 }
 
-# Function to ensure all executables are executable
-ensure_executables_permissions() {
-    echo "Ensuring all executables have proper permissions..."
-    find "$OUTPUT_DIR" -type f -exec chmod +x {} \;
-}
-
-# Function to check build success
+# Check build success
 check_builds() {
-    echo "Checking build results..."
+    log_section "Checking Build Results"
     declare -A EXPECTED_BINARIES=(
         ["cxxfilt"]="cxxfilt"
         ["readelf"]="readelf"
@@ -202,48 +288,76 @@ check_builds() {
     for dir in "${!EXPECTED_BINARIES[@]}"; do
         binary="${EXPECTED_BINARIES[$dir]}"
         if [ ! -f "$OUTPUT_DIR/$dir/$binary" ]; then
-            echo "Error: Binary $binary not found in $OUTPUT_DIR/$dir"
+            log_error "Binary not found: $binary"
             FAILED=1
         else
-            echo "Success: Found $binary in $OUTPUT_DIR/$dir"
-            # Check AFL instrumentation
-            echo "Checking AFL instrumentation for $binary..."
-            if ! nm -C "$OUTPUT_DIR/$dir/$binary" | grep -q "afl"; then
-                echo "Warning: No AFL instrumentation found in $binary"
+            if ! readelf -s "$OUTPUT_DIR/$dir/$binary" | grep -q "__afl_"; then
+                log_error "No AFL instrumentation found in $binary"
                 FAILED=1
             else
-                echo "Success: AFL instrumentation found in $binary"
+                log_success "✓ $binary built with AFL instrumentation"
             fi
         fi
     done
 
     if [ $BUILD_FAILED -eq 1 ] || [ $FAILED -eq 1 ]; then
-        echo "Build process failed:"
-        [ $BUILD_FAILED -eq 1 ] && echo "Some build scripts failed during execution"
-        [ $FAILED -eq 1 ] && echo "Some binaries are missing or lack AFL instrumentation"
+        log_error "Build process failed:"
+        [ $BUILD_FAILED -eq 1 ] && log_error "Some build scripts failed during execution"
+        [ $FAILED -eq 1 ] && log_error "Some binaries are missing or lack AFL instrumentation"
         exit 1
     else
-        echo "All builds completed successfully with AFL instrumentation!"
+        log_success "All builds completed successfully with AFL instrumentation!"
     fi
 }
 
+# Cleanup function
+cleanup() {
+    log_section "Cleaning up previous build artifacts"
+
+    # Check if directories exist before removing
+    if [ -d "$BUILD_DIR" ]; then
+        log_info "Removing previous build directory..."
+        rm -rf "$BUILD_DIR"
+    fi
+
+    if [ -d "$OUTPUT_DIR" ]; then
+        log_info "Removing previous output directory..."
+        rm -rf "$OUTPUT_DIR"
+    fi
+
+    # Create new session log directory
+    if [ ! -d "$LOGS_DIR" ]; then
+        mkdir -p "$LOGS_DIR"
+    fi
+    mkdir -p "$SESSION_LOG_DIR/builds"
+
+    log_success "Cleanup completed"
+}
+
 # Main execution
-echo "Starting build process..."
+log_section "Starting Build Process"
+
+# Cleanup previous builds
+cleanup
+
+# Create necessary directories after cleanup
+mkdir -p "$BUILD_DIR"
+mkdir -p "$OUTPUT_DIR"
 
 # Make scripts executable
 make_scripts_executable
 
-# Install dependencies
-install_dependencies
-
-# Install project-specific dependencies
-install_project_deps
-
-# Clone AFL++ source code
+# Clone AFL++ source code (always needed)
 clone_aflpp
 
-# Install AFL++
-install_aflpp
+# Install AFL++ if not installed
+if ! command_exists afl-fuzz; then
+    install_dependencies
+    install_aflpp
+fi
+
+# Install project dependencies
+install_project_deps
 
 # Extract projects
 extract_projects
@@ -251,10 +365,7 @@ extract_projects
 # Build all targets
 build_targets
 
-# Ensure all executables are executable
-ensure_executables_permissions
-
 # Check build results
 check_builds
 
-echo "Build process completed. Instrumented binaries are in $OUTPUT_DIR"
+log_success "Build process completed. Instrumented binaries are in $OUTPUT_DIR"
