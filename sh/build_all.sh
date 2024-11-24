@@ -59,34 +59,44 @@ command_exists() {
 # Install dependencies if not root, use sudo
 install_dependencies() {
     log_section "Installing Dependencies"
-    {
-        if [ "$EUID" -ne 0 ]; then
+    log_info "Starting installation of system dependencies..."
+    if [ "$EUID" -ne 0 ]; then
+        log_info "Running as non-root user, using sudo..."
+        {
             sudo apt-get update
             sudo apt-get install -y build-essential python3-dev automake cmake git flex bison libglib2.0-dev libpixman-1-dev python3-setuptools cargo libgtk-3-dev
             sudo apt-get install -y lld-14 llvm-14 llvm-14-dev clang-14 || sudo apt-get install -y lld llvm llvm-dev clang
             sudo apt-get install -y gcc-$(gcc --version | head -n1 | sed 's/\..*//' | sed 's/.* //')-plugin-dev libstdc++-$(gcc --version | head -n1 | sed 's/\..*//' | sed 's/.* //')-dev
             sudo apt-get install -y ninja-build cpio libcapstone-dev wget curl python3-pip
-        else
+        } >>"$MAIN_LOG" 2>&1
+    else
+        log_info "Running as root user..."
+        {
             apt-get update
             apt-get install -y build-essential python3-dev automake cmake git flex bison libglib2.0-dev libpixman-1-dev python3-setuptools cargo libgtk-3-dev
             apt-get install -y lld-14 llvm-14 llvm-14-dev clang-14 || apt-get install -y lld llvm llvm-dev clang
             apt-get install -y gcc-$(gcc --version | head -n1 | sed 's/\..*//' | sed 's/.* //')-plugin-dev libstdc++-$(gcc --version | head -n1 | sed 's/\..*//' | sed 's/.* //')-dev
             apt-get install -y ninja-build cpio libcapstone-dev wget curl python3-pip
-        fi
-    } >>"$MAIN_LOG" 2>&1
+        } >>"$MAIN_LOG" 2>&1
+    fi
     log_success "Dependencies installed successfully"
 }
 
 # Additional dependencies for specific projects
 install_project_deps() {
     log_section "Installing Project-Specific Dependencies"
-    {
-        if [ "$EUID" -ne 0 ]; then
+    log_info "Starting installation of project-specific dependencies..."
+    if [ "$EUID" -ne 0 ]; then
+        log_info "Running as non-root user, using sudo..."
+        {
             sudo apt-get install -y libtool-bin libpcap-dev texinfo zlib1g-dev
-        else
+        } >>"$MAIN_LOG" 2>&1
+    else
+        log_info "Running as root user..."
+        {
             apt-get install -y libtool-bin libpcap-dev texinfo zlib1g-dev
-        fi
-    } >>"$MAIN_LOG" 2>&1
+        } >>"$MAIN_LOG" 2>&1
+    fi
     log_success "Project dependencies installed successfully"
 }
 
@@ -112,19 +122,16 @@ clone_aflpp() {
 install_aflpp() {
     log_section "Installing AFL++"
     if ! command_exists afl-fuzz; then
+        log_info "AFL++ not found, starting installation..."
         cd "$BUILD_DIR/AFLplusplus"
-        {
-            make distrib
-            if [ "$EUID" -ne 0 ]; then
-                sudo make install
-            else
-                make install
-            fi
-        } >>"$MAIN_LOG" 2>&1
+        log_info "Building AFL++ distribution..."
+        make distrib >>"$MAIN_LOG" 2>&1
+        log_info "Installing AFL++..."
+        make install >>"$MAIN_LOG" 2>&1
         cd "$SCRIPT_DIR"
         log_success "AFL++ installed successfully"
     else
-        log_info "AFL++ is already installed"
+        log_info "AFL++ is already installed, skipping installation"
     fi
 }
 
@@ -185,8 +192,11 @@ make_scripts_executable() {
 # Build all targets
 build_targets() {
     log_section "Building Targets"
+    log_info "Setting up AFL++ environment variables..."
     export AFLPP="$(dirname $(which afl-fuzz))"
     export AFLPP_DIR="$AFLPP_DIR"
+    log_info "AFLPP path: $AFLPP"
+    log_info "AFLPP_DIR: $AFLPP_DIR"
 
     # Array of build scripts and their corresponding source directories
     declare -A BUILD_CONFIGS=(
@@ -208,29 +218,34 @@ build_targets() {
     declare -A PID_TO_SCRIPT=()
 
     # Create logs directory
+    log_info "Creating build logs directory at $SESSION_LOG_DIR/builds"
     mkdir -p "$SESSION_LOG_DIR/builds"
 
     # Group scripts by source directory
+    log_info "Grouping build scripts by source directory..."
     declare -A DIR_TO_SCRIPTS=()
     for script in "${!BUILD_CONFIGS[@]}"; do
         source_dir="${BUILD_CONFIGS[$script]}"
         DIR_TO_SCRIPTS[$source_dir]+=" $script"
     done
+    log_info "Found ${#DIR_TO_SCRIPTS[@]} unique source directories"
 
     # Execute scripts, running those from the same source directory sequentially
+    log_info "Starting build process..."
     for source_dir in "${!DIR_TO_SCRIPTS[@]}"; do
         read -ra scripts <<<"${DIR_TO_SCRIPTS[$source_dir]}"
         if [ ${#scripts[@]} -gt 1 ]; then
             # Multiple scripts for same source - run sequentially in background
+            log_info "Processing ${#scripts[@]} scripts for source directory $source_dir sequentially..."
             (
                 for script in "${scripts[@]}"; do
                     script_name="${script%.sh}"
-                    log_info "Building $script_name..."
+                    log_info "Starting build for $script_name from $source_dir..."
                     if ! bash "$SCRIPT_DIR/$script" "$BUILD_DIR/$source_dir" "$OUTPUT_DIR" >"$SESSION_LOG_DIR/builds/${script%.sh}.log" 2>&1; then
                         log_error "Build failed for $script_name (check $SESSION_LOG_DIR/builds/${script%.sh}.log for details)"
                         exit 1
                     fi
-                    log_success "Built $script_name"
+                    log_success "Built $script_name successfully"
                 done
             ) &
             pid=$!
@@ -243,7 +258,7 @@ build_targets() {
             # Single script for source - run in parallel
             script="${scripts[0]}"
             script_name="${script%.sh}"
-            log_info "Building $script_name..."
+            log_info "Starting build for $script_name from $source_dir (parallel)..."
             bash "$SCRIPT_DIR/$script" "$BUILD_DIR/$source_dir" "$OUTPUT_DIR" >"$SESSION_LOG_DIR/builds/${script%.sh}.log" 2>&1 &
             pid=$!
             PIDS+=($pid)
@@ -252,7 +267,10 @@ build_targets() {
     done
 
     # Wait for all processes
+    log_info "Waiting for all build processes to complete..."
     for pid in "${PIDS[@]}"; do
+        script_names=${PID_TO_SCRIPT[$pid]}
+        log_info "Checking status for process $pid (${script_names})..."
         if ! wait $pid; then
             script_names=${PID_TO_SCRIPT[$pid]}
             for script_name in $script_names; do
@@ -262,10 +280,16 @@ build_targets() {
         else
             script_names=${PID_TO_SCRIPT[$pid]}
             for script_name in $script_names; do
-                log_success "Built $script_name"
+                log_success "Built $script_name successfully"
             done
         fi
     done
+
+    if [ $BUILD_FAILED -eq 0 ]; then
+        log_success "All builds completed successfully"
+    else
+        log_error "Some builds failed. Check the logs for details"
+    fi
 }
 
 # Check build success
@@ -295,7 +319,7 @@ check_builds() {
                 log_error "No AFL instrumentation found in $binary"
                 FAILED=1
             else
-                log_success "✓ $binary built with AFL instrumentation"
+                log_success "$binary built with AFL instrumentation"
             fi
         fi
     done
