@@ -2,7 +2,7 @@
 
 > 在原项目基础上添加了更多比较 Tricky 的构建脚本，现在可以一键构建所有目标程序并生成初始种子 😋。使用方法：进入`sh`目录，运行`chmod +x build_all.sh && ./build_all.sh`即可，结果位于根目录下的`output`文件夹中。
 >
-> 默认不使用`afl-tmin`进行种子最小化，结果目录下的`tmin`文件夹为`afl-cmin`结果，设置环境变量`AFL_USE_TMIN=1`可以开启。
+> 默认不使用`afl-tmin`进行种子最小化，结果目录下的`tmin`文件夹为`afl-cmin`结果，设置环境变量`ENABLE_AFL_TMIN=1`可以开启。
 
 南京大学软件学院，2024 秋季软件测试课程，模糊测试方向代码大作业选题指定的模糊目标程序。
 选择该课题的小组应当在了解[AFL++](https://github.com/AFLplusplus/AFLplusplus)运行原理的基础上，参考 AFL++的实现，使用 Java 或者 Python 语言自行实现模糊器。

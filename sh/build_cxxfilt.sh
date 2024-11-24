@@ -65,13 +65,13 @@ echo "_ZN3std6vectorI4ItemSaIS0_EE9push_backERKS0_" >"$RAW_SEEDS_DIR/seed2"
 echo "_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEED1Ev" >"$RAW_SEEDS_DIR/seed3"
 echo "_ZNSt6thread11_State_implINS_8_InvokerISt5tupleIJZZN8TestCase7runImplIJZN13SeqCstAcqRel23runEvEUlvE_ZNS5_3runEvEUlvE0_EEE10TestResultDpT_ENKUlT_E_clIS7_EEDaS9_EUlvE_EEEEEE6_M_runEv" >"$RAW_SEEDS_DIR/seed4"
 
-# Check if AFL_USE_TMIN is set and equals "1"
-AFL_USE_TMIN=${AFL_USE_TMIN:-0}
+# Check if ENABLE_AFL_TMIN is set and equals "1"
+ENABLE_AFL_TMIN=${ENABLE_AFL_TMIN:-0}
 
 # Run afl-cmin to minimize the test corpus
 "$AFLPP/afl-cmin" -i "$RAW_SEEDS_DIR" -o "$CMIN_SEEDS_DIR" -- "$TARGET_DIR/cxxfilt"
 
-if [ "$AFL_USE_TMIN" = "1" ]; then
+if [ "$ENABLE_AFL_TMIN" = "1" ]; then
   echo "Running afl-tmin for further minimization..."
   # Further minimize each seed with afl-tmin
   for seed in "$CMIN_SEEDS_DIR"/*; do
@@ -81,7 +81,7 @@ if [ "$AFL_USE_TMIN" = "1" ]; then
     fi
   done
 else
-  echo "Skipping afl-tmin minimization (set AFL_USE_TMIN=1 to enable)"
+  echo "Skipping afl-tmin minimization (set ENABLE_AFL_TMIN=1 to enable)"
   # Copy cmin results to tmin directory when not using afl-tmin
   cp "$CMIN_SEEDS_DIR"/* "$TMIN_SEEDS_DIR/"
 fi
