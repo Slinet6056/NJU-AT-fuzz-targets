@@ -29,14 +29,13 @@ echo "BENCH_DIR=$BENCH_DIR"
 echo "CC=$CC"
 echo "CXX=$CXX"
 echo "==================== CONF-LOG ===================="
-sleep 3
 
 # Instrument SUBJECT programs
 pushd "$SUBJECT_DIR" || exit 1
 # Build lua
 cd src
 make clean
-make all MYCFLAGS="-O2 -fPIC -g" MYLIBS="-ldl" CC="$AFLPP/afl-cc"
+make all MYCFLAGS="-O0 -fPIC -g" MYLIBS="-ldl" CC="$AFLPP/afl-cc"
 cd ..
 popd || exit 1
 

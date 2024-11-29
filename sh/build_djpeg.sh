@@ -21,9 +21,9 @@ popd || exit 1
 # Choose compilers
 export CC="$AFLPP/afl-cc"
 export CXX="$AFLPP/afl-c++"
-# Add static linking flags
-export CFLAGS="-static"
-export CXXFLAGS="-static"
+# Add static linking flags and optimization level
+export CFLAGS="-static -O0"
+export CXXFLAGS="-static -O0"
 export LDFLAGS="-static"
 
 # Show configuration results
@@ -33,7 +33,6 @@ echo "BENCH_DIR=$BENCH_DIR"
 echo "CC=$CC"
 echo "CXX=$CXX"
 echo "==================== CONF-LOG ===================="
-sleep 3
 
 # Instrument SUBJECT programs
 pushd "$SUBJECT_DIR" || exit 1

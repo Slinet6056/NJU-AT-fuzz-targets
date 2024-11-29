@@ -29,12 +29,11 @@ echo "BENCH_DIR=$BENCH_DIR"
 echo "CC=$CC"
 echo "CXX=$CXX"
 echo "==================== CONF-LOG ===================="
-sleep 3
 
 # Instrument SUBJECT programs
 pushd "$SUBJECT_DIR" || exit 1
 rm mjs
-$CC -DMJS_MAIN mjs.c -ldl -g -o mjs
+$CC -DMJS_MAIN mjs.c -ldl -g -O0 -o mjs
 popd || exit 1
 
 # Move to target directory

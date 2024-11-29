@@ -21,6 +21,9 @@ popd || exit 1
 # Choose compilers
 export CC="$AFLPP/afl-cc"
 export CXX="$AFLPP/afl-c++"
+# Add optimization flags
+export CFLAGS="-O0"
+export CXXFLAGS="-O0"
 
 # Show configuration results
 echo "==================== CONF-LOG ===================="
@@ -28,8 +31,9 @@ echo "SUBJECT_DIR=$SUBJECT_DIR"
 echo "BENCH_DIR=$BENCH_DIR"
 echo "CC=$CC"
 echo "CXX=$CXX"
+echo "CFLAGS=$CFLAGS"
+echo "CXXFLAGS=$CXXFLAGS"
 echo "==================== CONF-LOG ===================="
-sleep 3
 
 # Instrument SUBJECT programs
 pushd "$SUBJECT_DIR" || exit 1
@@ -38,7 +42,7 @@ pushd "$SUBJECT_DIR" || exit 1
 make clean
 make
 # Build readpng
-$CC -o readpng ./contrib/libtests/readpng.c ./.libs/libpng16.a -lz -lm
+$CC -O0 -o readpng ./contrib/libtests/readpng.c ./.libs/libpng16.a -lz -lm
 popd || exit 1
 
 # Move to target directory

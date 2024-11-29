@@ -29,7 +29,6 @@ echo "BENCH_DIR=$BENCH_DIR"
 echo "CC=$CC"
 echo "CXX=$CXX"
 echo "==================== CONF-LOG ===================="
-sleep 3
 
 # Instrument SUBJECT programs
 pushd "$SUBJECT_DIR" || exit 1
@@ -37,7 +36,7 @@ pushd "$SUBJECT_DIR" || exit 1
 ./autogen.sh
 ./configure --disable-shared
 make clean
-make CFLAGS="-g -O2"
+make CFLAGS="-g -O0"
 popd || exit 1
 
 # Move to target directory
