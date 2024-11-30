@@ -53,7 +53,12 @@ if [ -d "$TARGET_DIR" ]; then
   rm -rf "$TARGET_DIR"
 fi
 mkdir -p "$TARGET_DIR"
-mv "$SUBJECT_DIR/binutils/cxxfilt" "$TARGET_DIR" || mv "$SUBJECT_DIR/binutils/.libs/cxxfilt" "$TARGET_DIR"
+mv "$SUBJECT_DIR/binutils/cxxfilt" "$TARGET_DIR/cxxfilt.orig"
+cat > "$TARGET_DIR/cxxfilt" << 'EOF'
+#!/bin/bash
+cat "$1" | "$(dirname "$0")/cxxfilt.orig"
+EOF
+chmod +x "$TARGET_DIR/cxxfilt"
 
 # Create and prepare seeds directories
 SEEDS_BASE_DIR="$TARGET_DIR/seeds"
@@ -75,7 +80,7 @@ echo "_ZNSt6thread11_State_implINS_8_InvokerISt5tupleIJZZN8TestCase7runImplIJZN1
 ENABLE_AFL_TMIN=${ENABLE_AFL_TMIN:-0}
 
 # Run afl-cmin to minimize the test corpus
-"$AFLPP/afl-cmin" -i "$RAW_SEEDS_DIR" -o "$CMIN_SEEDS_DIR" -- "$TARGET_DIR/cxxfilt"
+"$AFLPP/afl-cmin" -i "$RAW_SEEDS_DIR" -o "$CMIN_SEEDS_DIR" -- "$TARGET_DIR/cxxfilt.orig"
 
 if [ "$ENABLE_AFL_TMIN" = "1" ]; then
   echo "Running afl-tmin for further minimization..."
@@ -83,7 +88,7 @@ if [ "$ENABLE_AFL_TMIN" = "1" ]; then
   for seed in "$CMIN_SEEDS_DIR"/*; do
     if [ -f "$seed" ]; then
       seed_name=$(basename "$seed")
-      "$AFLPP/afl-tmin" -i "$seed" -o "$TMIN_SEEDS_DIR/$seed_name" -- "$TARGET_DIR/cxxfilt"
+      "$AFLPP/afl-tmin" -i "$seed" -o "$TMIN_SEEDS_DIR/$seed_name" -- "$TARGET_DIR/cxxfilt.orig"
     fi
   done
 else

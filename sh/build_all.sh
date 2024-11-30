@@ -301,12 +301,12 @@ build_targets() {
 check_builds() {
     log_section "Checking Build Results"
     declare -A EXPECTED_BINARIES=(
-        ["cxxfilt"]="cxxfilt"
+        ["cxxfilt"]="cxxfilt.orig"
         ["readelf"]="readelf"
         ["nm-new"]="nm-new"
         ["objdump"]="objdump"
         ["djpeg"]="djpeg"
-        ["readpng"]="readpng"
+        ["readpng"]="readpng.orig"
         ["xmllint"]="xmllint"
         ["lua"]="lua"
         ["mjs"]="mjs"
